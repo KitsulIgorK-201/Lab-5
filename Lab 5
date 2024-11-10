@@ -1,0 +1,492 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+
+public class Station
+{
+    public string Name { get; set; }
+    public int YearOpened { get; set; }
+    public Listint PassengerCounts { get; set; }
+    public string Comment { get; set; }
+
+    public Station(string name, int yearOpened, Listint passengerCounts, string comment)
+    {
+        Name = name;
+        YearOpened = yearOpened;
+        PassengerCounts = passengerCounts;
+        Comment = comment;
+    }
+
+    public virtual int GetTotalPassengers()
+    {
+        return PassengerCounts.Sum();
+    }
+
+    public int GetHourWithLeastPassengers()
+    {
+        return PassengerCounts.IndexOf(PassengerCounts.Min());
+    }
+
+    public int CommentWordCount()
+    {
+        return Comment.Split(new[] { ' ', 't' }, StringSplitOptions.RemoveEmptyEntries).Length;
+    }
+
+    public override string ToString()
+    {
+        return $Назва {Name}, Рiк вiдкриття {YearOpened}, Пасажири по годинах {string.Join(,, PassengerCounts)}, Коментар {Comment};
+    }
+}
+
+public class Database
+{
+    private ListStation stations = new ListStation();
+    private const string FilePath = stations.txt;
+
+    public Database()
+    {
+        LoadData(); 
+    }
+
+    public void AddStation(Station station)
+    {
+        stations.Add(station);
+        SaveData();
+    }
+
+    public void EditStation(string name, Station updatedStation)
+    {
+        var station = stations.FirstOrDefault(s = s.Name == name);
+        if (station != null)
+        {
+            station.Name = updatedStation.Name;
+            station.YearOpened = updatedStation.YearOpened;
+            station.PassengerCounts = updatedStation.PassengerCounts;
+            station.Comment = updatedStation.Comment;
+            SaveData();
+        }
+        else
+        {
+            Console.WriteLine(Станцiю не знайдено.);
+        }
+    }
+
+    public void DeleteStation(string name)
+    {
+        var station = stations.FirstOrDefault(s = s.Name == name);
+        if (station != null)
+        {
+            stations.Remove(station);
+            SaveData();
+        }
+        else
+        {
+            Console.WriteLine(Станцiю не знайдено.);
+        }
+    }
+
+    public void DisplayAllStations()
+    {
+        foreach (var station in stations)
+        {
+            Console.WriteLine(station);
+        }
+    }
+
+    public void DisplaySummary()
+    {
+        foreach (var station in stations)
+        {
+            Console.WriteLine(${station.Name} - Загальна кiлькiсть пасажирiв {station.GetTotalPassengers()}, Година з найменшою кiлькiстю пасажирiв {station.GetHourWithLeastPassengers()}, Кiлькiсть слiв у коментарi {station.CommentWordCount()});
+        }
+    }
+
+    private void SaveData()
+    {
+        using (var writer = new StreamWriter(FilePath))
+        {
+            foreach (var station in stations)
+            {
+                writer.WriteLine(${station.Name};{station.YearOpened};{string.Join(,, station.PassengerCounts)};{station.Comment});
+            }
+        }
+    }
+
+    private void LoadData()
+    {
+        if (!File.Exists(FilePath))
+        {
+            Console.WriteLine(Файл stations.txt не знайдено.);
+            return;
+        }
+
+        using (var reader = new StreamReader(FilePath, System.Text.Encoding.UTF8))
+        {
+            string line;
+            while ((line = reader.ReadLine()) != null)
+            {
+                var parts = line.Split(';');
+                if (parts.Length == 4)
+                {
+                    var name = parts[0];
+                    var yearOpened = int.Parse(parts[1]);
+                    var passengerCounts = parts[2].Split(',').Select(int.Parse).ToList();
+                    var comment = parts[3];
+                    stations.Add(new Station(name, yearOpened, passengerCounts, comment));
+                }
+            }
+        }
+    }
+}
+
+public class Program
+{
+    static void Main(string[] args)
+    {
+        var database = new Database();
+        bool exit = false;
+
+        while (!exit)
+        {
+            Console.WriteLine(Виберiть дiю);
+            Console.WriteLine(a - Додати станцiю);
+            Console.WriteLine(e - Редагувати станцiю);
+            Console.WriteLine(d - Видалити станцiю);
+            Console.WriteLine(v - Показати всi станцiї);
+            Console.WriteLine(s - Показати пiдсумок);
+            Console.WriteLine(Enter - Вихiд);
+
+            var input = Console.ReadKey().Key;
+            Console.WriteLine();
+
+            switch (input)
+            {
+                case ConsoleKey.A
+                    AddStation(database);
+                    break;
+                case ConsoleKey.E
+                    EditStation(database);
+                    break;
+                case ConsoleKey.D
+                    DeleteStation(database);
+                    break;
+                case ConsoleKey.V
+                    database.DisplayAllStations();
+                    break;
+                case ConsoleKey.S
+                    database.DisplaySummary();
+                    break;
+                case ConsoleKey.Enter
+                    exit = true;
+                    break;
+                default
+                    Console.WriteLine(Невiдома команда.);
+                    break;
+            }
+        }
+    }
+
+    private static void AddStation(Database database)
+    {
+        try
+        {
+            Console.Write(Введiть назву станцiї );
+            var name = Console.ReadLine();
+
+            Console.Write(Введiть рiк вiдкриття );
+            var yearOpened = int.Parse(Console.ReadLine());
+
+            Console.Write(Введiть кiлькiсть пасажирiв по годинах (через кому) );
+            var passengerCounts = Console.ReadLine().Split(',').Select(int.Parse).ToList();
+
+            Console.Write(Введiть коментар );
+            var comment = Console.ReadLine();
+
+            var station = new Station(name, yearOpened, passengerCounts, comment);
+            database.AddStation(station);
+            Console.WriteLine(Станцiю додано.);
+        }
+        catch (FormatException)
+        {
+            Console.WriteLine(Неправильний формат вводу.);
+        }
+    }
+
+    private static void EditStation(Database database)
+    {
+        Console.Write(Введiть назву станцiї для редагування );
+        var name = Console.ReadLine();
+
+        Console.Write(Введiть нову назву станцiї );
+        var newName = Console.ReadLine();
+
+        Console.Write(Введiть новий рiк вiдкриття );
+        var newYearOpened = int.Parse(Console.ReadLine());
+
+        Console.Write(Введiть нову кiлькiсть пасажирiв по годинах (через кому) );
+        var newPassengerCounts = Console.ReadLine().Split(',').Select(int.Parse).ToList();
+
+        Console.Write(Введiть новий коментар );
+        var newComment = Console.ReadLine();
+
+        var updatedStation = new Station(newName, newYearOpened, newPassengerCounts, newComment);
+        database.EditStation(name, updatedStation);
+        Console.WriteLine(Станцiю оновлено.);
+    }
+
+    private static void DeleteStation(Database database)
+    {
+        Console.Write(Введiть назву станцiї для видалення );
+        var name = Console.ReadLine();
+
+        database.DeleteStation(name);
+        Console.WriteLine(Станцiю видалено.);
+    }
+}
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+
+public class Station
+{
+    public string Name { get; set; }
+    public int YearOpened { get; set; }
+    public Listint PassengerCounts { get; set; }
+    public string Comment { get; set; }
+
+    public Station(string name, int yearOpened, Listint passengerCounts, string comment)
+    {
+        Name = name;
+        YearOpened = yearOpened;
+        PassengerCounts = passengerCounts;
+        Comment = comment;
+    }
+
+    public virtual int GetTotalPassengers()
+    {
+        return PassengerCounts.Sum();
+    }
+
+    public int GetHourWithLeastPassengers()
+    {
+        return PassengerCounts.IndexOf(PassengerCounts.Min());
+    }
+
+    public int CommentWordCount()
+    {
+        return Comment.Split(new[] { ' ', 't' }, StringSplitOptions.RemoveEmptyEntries).Length;
+    }
+
+    public override string ToString()
+    {
+        return $Назва {Name}, Рiк вiдкриття {YearOpened}, Пасажири по годинах {string.Join(,, PassengerCounts)}, Коментар {Comment};
+    }
+}
+
+public class Database
+{
+    private ListStation stations = new ListStation();
+    private const string FilePath = stations.txt;
+
+    public Database()
+    {
+        LoadData(); 
+    }
+
+    public void AddStation(Station station)
+    {
+        stations.Add(station);
+        SaveData();
+    }
+
+    public void EditStation(string name, Station updatedStation)
+    {
+        var station = stations.FirstOrDefault(s = s.Name == name);
+        if (station != null)
+        {
+            station.Name = updatedStation.Name;
+            station.YearOpened = updatedStation.YearOpened;
+            station.PassengerCounts = updatedStation.PassengerCounts;
+            station.Comment = updatedStation.Comment;
+            SaveData();
+        }
+        else
+        {
+            Console.WriteLine(Станцiю не знайдено.);
+        }
+    }
+
+    public void DeleteStation(string name)
+    {
+        var station = stations.FirstOrDefault(s = s.Name == name);
+        if (station != null)
+        {
+            stations.Remove(station);
+            SaveData();
+        }
+        else
+        {
+            Console.WriteLine(Станцiю не знайдено.);
+        }
+    }
+
+    public void DisplayAllStations()
+    {
+        foreach (var station in stations)
+        {
+            Console.WriteLine(station);
+        }
+    }
+
+    public void DisplaySummary()
+    {
+        foreach (var station in stations)
+        {
+            Console.WriteLine(${station.Name} - Загальна кiлькiсть пасажирiв {station.GetTotalPassengers()}, Година з найменшою кiлькiстю пасажирiв {station.GetHourWithLeastPassengers()}, Кiлькiсть слiв у коментарi {station.CommentWordCount()});
+        }
+    }
+
+    private void SaveData()
+    {
+        using (var writer = new StreamWriter(FilePath))
+        {
+            foreach (var station in stations)
+            {
+                writer.WriteLine(${station.Name};{station.YearOpened};{string.Join(,, station.PassengerCounts)};{station.Comment});
+            }
+        }
+    }
+
+    private void LoadData()
+    {
+        if (!File.Exists(FilePath))
+        {
+            Console.WriteLine(Файл stations.txt не знайдено.);
+            return;
+        }
+
+        using (var reader = new StreamReader(FilePath, System.Text.Encoding.UTF8))
+        {
+            string line;
+            while ((line = reader.ReadLine()) != null)
+            {
+                var parts = line.Split(';');
+                if (parts.Length == 4)
+                {
+                    var name = parts[0];
+                    var yearOpened = int.Parse(parts[1]);
+                    var passengerCounts = parts[2].Split(',').Select(int.Parse).ToList();
+                    var comment = parts[3];
+                    stations.Add(new Station(name, yearOpened, passengerCounts, comment));
+                }
+            }
+        }
+    }
+}
+
+public class Program
+{
+    static void Main(string[] args)
+    {
+        var database = new Database();
+        bool exit = false;
+
+        while (!exit)
+        {
+            Console.WriteLine(Виберiть дiю);
+            Console.WriteLine(a - Додати станцiю);
+            Console.WriteLine(e - Редагувати станцiю);
+            Console.WriteLine(d - Видалити станцiю);
+            Console.WriteLine(v - Показати всi станцiї);
+            Console.WriteLine(s - Показати пiдсумок);
+            Console.WriteLine(Enter - Вихiд);
+
+            var input = Console.ReadKey().Key;
+            Console.WriteLine();
+
+            switch (input)
+            {
+                case ConsoleKey.A
+                    AddStation(database);
+                    break;
+                case ConsoleKey.E
+                    EditStation(database);
+                    break;
+                case ConsoleKey.D
+                    DeleteStation(database);
+                    break;
+                case ConsoleKey.V
+                    database.DisplayAllStations();
+                    break;
+                case ConsoleKey.S
+                    database.DisplaySummary();
+                    break;
+                case ConsoleKey.Enter
+                    exit = true;
+                    break;
+                default
+                    Console.WriteLine(Невiдома команда.);
+                    break;
+            }
+        }
+    }
+
+    private static void AddStation(Database database)
+    {
+        try
+        {
+            Console.Write(Введiть назву станцiї );
+            var name = Console.ReadLine();
+
+            Console.Write(Введiть рiк вiдкриття );
+            var yearOpened = int.Parse(Console.ReadLine());
+
+            Console.Write(Введiть кiлькiсть пасажирiв по годинах (через кому) );
+            var passengerCounts = Console.ReadLine().Split(',').Select(int.Parse).ToList();
+
+            Console.Write(Введiть коментар );
+            var comment = Console.ReadLine();
+
+            var station = new Station(name, yearOpened, passengerCounts, comment);
+            database.AddStation(station);
+            Console.WriteLine(Станцiю додано.);
+        }
+        catch (FormatException)
+        {
+            Console.WriteLine(Неправильний формат вводу.);
+        }
+    }
+
+    private static void EditStation(Database database)
+    {
+        Console.Write(Введiть назву станцiї для редагування );
+        var name = Console.ReadLine();
+
+        Console.Write(Введiть нову назву станцiї );
+        var newName = Console.ReadLine();
+
+        Console.Write(Введiть новий рiк вiдкриття );
+        var newYearOpened = int.Parse(Console.ReadLine());
+
+        Console.Write(Введiть нову кiлькiсть пасажирiв по годинах (через кому) );
+        var newPassengerCounts = Console.ReadLine().Split(',').Select(int.Parse).ToList();
+
+        Console.Write(Введiть новий коментар );
+        var newComment = Console.ReadLine();
+
+        var updatedStation = new Station(newName, newYearOpened, newPassengerCounts, newComment);
+        database.EditStation(name, updatedStation);
+        Console.WriteLine(Станцiю оновлено.);
+    }
+
+    private static void DeleteStation(Database database)
+    {
+        Console.Write(Введiть назву станцiї для видалення );
+        var name = Console.ReadLine();
+
+        database.DeleteStation(name);
+        Console.WriteLine(Станцiю видалено.);
+    }
+}
